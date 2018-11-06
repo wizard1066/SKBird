@@ -11,79 +11,149 @@ import GameplayKit
 
 class GameScene: SKScene {
     
-    private var label : SKLabelNode?
-    private var spinnyNode : SKShapeNode?
-    
+//    var projectile: Projectile!
+    var projectile: SKSpriteNode!
+    var projectileIsDragged = false
+    var touchCurrentPoint: CGPoint!
+    var touchStartingPoint: CGPoint!
+
     override func didMove(to view: SKView) {
+        super.didMove(to: view)
+        backgroundColor = UIColor.black
         
-        // Get label node from scene and store it for use later
-        self.label = self.childNode(withName: "//helloLabel") as? SKLabelNode
-        if let label = self.label {
-            label.alpha = 0.0
-            label.run(SKAction.fadeIn(withDuration: 2.0))
-        }
+        physicsBody = SKPhysicsBody(edgeLoopFrom: frame)
+        physicsWorld.gravity = Settings.Game.gravity
+        physicsWorld.speed = 0.5
         
-        // Create shape node to use during mouse interaction
-        let w = (self.size.width + self.size.height) * 0.05
-        self.spinnyNode = SKShapeNode.init(rectOf: CGSize.init(width: w, height: w), cornerRadius: w * 0.3)
-        
-        if let spinnyNode = self.spinnyNode {
-            spinnyNode.lineWidth = 2.5
-            
-            spinnyNode.run(SKAction.repeatForever(SKAction.rotate(byAngle: CGFloat(Double.pi), duration: 1)))
-            spinnyNode.run(SKAction.sequence([SKAction.wait(forDuration: 0.5),
-                                              SKAction.fadeOut(withDuration: 0.5),
-                                              SKAction.removeFromParent()]))
-        }
-    }
-    
-    
-    func touchDown(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.green
-            self.addChild(n)
-        }
-    }
-    
-    func touchMoved(toPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.blue
-            self.addChild(n)
-        }
-    }
-    
-    func touchUp(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.red
-            self.addChild(n)
-        }
+        setupSlingshot()
+        setupBoxes()
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let label = self.label {
-            label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
+        func shouldStartDragging(touchLocation:CGPoint, threshold: CGFloat) -> Bool {
+            let distance = fingerDistanceFromProjectileRestPosition(
+                projectileRestPosition: Settings.Metrics.projectileRestPosition,
+                fingerPosition: touchLocation
+            )
+            return distance < Settings.Metrics.projectileRadius + threshold
         }
         
-        for t in touches { self.touchDown(atPoint: t.location(in: self)) }
+        if let touch = touches.first {
+            let touchLocation = touch.location(in: self)
+            
+            if !projectileIsDragged && shouldStartDragging(touchLocation: touchLocation, threshold: Settings.Metrics.projectileTouchThreshold)  {
+                touchStartingPoint = touchLocation
+                touchCurrentPoint = touchLocation
+                projectileIsDragged = true
+            }
+        }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchMoved(toPoint: t.location(in: self)) }
+        if projectileIsDragged {
+            if let touch = touches.first {
+                let touchLocation = touch.location(in: self)
+                let distance = fingerDistanceFromProjectileRestPosition(projectileRestPosition: touchLocation, fingerPosition: touchStartingPoint)
+                if distance < Settings.Metrics.rLimit  {
+                    touchCurrentPoint = touchLocation
+                } else {
+                    touchCurrentPoint = projectilePositionForFingerPosition(
+                        fingerPosition: touchLocation,
+                        projectileRestPosition: touchStartingPoint,
+                        rLimit: Settings.Metrics.rLimit
+                    )
+                }
+            }
+            projectile.position = touchCurrentPoint
+        }
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
+        if projectileIsDragged {
+            projectileIsDragged = false
+            let distance = fingerDistanceFromProjectileRestPosition(projectileRestPosition: touchCurrentPoint, fingerPosition: touchStartingPoint)
+            if distance > Settings.Metrics.projectileSnapLimit {
+                let vectorX = touchStartingPoint.x - touchCurrentPoint.x
+                let vectorY = touchStartingPoint.y - touchCurrentPoint.y
+//                projectile.physicsBody = SKPhysicsBody(circleOfRadius: Settings.Metrics.projectileRadius)
+                let redBird = SKTexture(imageNamed: "redBird")
+                projectile.physicsBody = SKPhysicsBody(texture: redBird, size: redBird.size())
+                
+                projectile.physicsBody?.applyImpulse(
+                    CGVector(
+                        dx: vectorX * Settings.Metrics.forceMultiplier,
+                        dy: vectorY * Settings.Metrics.forceMultiplier
+                    )
+                )
+            } else {
+                projectile.physicsBody = nil
+                projectile.position = Settings.Metrics.projectileRestPosition
+            }
+        }
     }
     
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
+    // Version I
+    
+//    func setupSlingshot() {
+//        let slingshot_1 = SKSpriteNode(imageNamed: "slingshot_1")
+//        slingshot_1.position = CGPoint(x: 100, y: 50)
+//        addChild(slingshot_1)
+//
+//        let projectilePath = UIBezierPath(
+//            arcCenter: CGPoint.zero,
+//            radius: Settings.Metrics.projectileRadius,
+//            startAngle: 0,
+//            endAngle: CGFloat(CGFloat.pi * 2),
+//            clockwise: true
+//        )
+//        projectile = Projectile(path: projectilePath, color: UIColor.red, borderColor: UIColor.white)
+//        projectile.position = Settings.Metrics.projectileRestPosition
+//        addChild(projectile)
+//
+//        let slingshot_2 = SKSpriteNode(imageNamed: "slingshot_2")
+//        slingshot_2.position = CGPoint(x: 100, y: 50)
+//        addChild(slingshot_2)
+//    }
+    
+    func setupSlingshot() {
+        let slingshot_1 = SKSpriteNode(imageNamed: "slingshot_1")
+        slingshot_1.position = CGPoint(x: 100, y: 50)
+        addChild(slingshot_1)
+        
+        let slingshot_2 = SKSpriteNode(imageNamed: "slingshot_2")
+        slingshot_2.position = CGPoint(x: 100, y: 50)
+        addChild(slingshot_2)
+        
+        projectile = SKSpriteNode(imageNamed:"redBird")
+        projectile.position = Settings.Metrics.projectileRestPosition
+        addChild(projectile)
+    }
+    
+    func setupBoxes() {
+        for i in 1...2 {
+            for j in 1...8 {
+                let box = Box(imageNamed: "box_2")
+                box.integrity = 2
+                box.position = CGPoint(x: 400 + (i * 20 + 5 * i), y:  j * 20 + j)
+                box.physicsBody = SKPhysicsBody(rectangleOf: box.size)
+                addChild(box)
+            }
+        }
+    }
+    
+    // MARK: helper functions
+    
+    func fingerDistanceFromProjectileRestPosition(projectileRestPosition: CGPoint, fingerPosition: CGPoint) -> CGFloat {
+        return sqrt(pow(projectileRestPosition.x - fingerPosition.x,2) + pow(projectileRestPosition.y - fingerPosition.y,2))
+    }
+
+    func projectilePositionForFingerPosition(fingerPosition: CGPoint, projectileRestPosition:CGPoint, rLimit:CGFloat) -> CGPoint {
+        let θ = atan2(fingerPosition.x - projectileRestPosition.x, fingerPosition.y - projectileRestPosition.y)
+        let cX = sin(θ) * rLimit
+        let cY = cos(θ) * rLimit
+        return CGPoint(x: cX + projectileRestPosition.x, y: cY + projectileRestPosition.y)
     }
     
     
-    override func update(_ currentTime: TimeInterval) {
-        // Called before each frame is rendered
-    }
+
 }
