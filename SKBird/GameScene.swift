@@ -9,9 +9,23 @@
 import SpriteKit
 import GameplayKit
 
-class GameScene: SKScene {
+
+
+class GameScene: SKScene, touchMe {
+    
+    func spriteTouched(box: TouchableSprite) {
+        let scene = GameScene()
+        scene.size = view!.bounds.size
+        scene.scaleMode = .aspectFill
+        let doors = SKTransition.crossFade(withDuration: 2)
+        doors.pausesIncomingScene = false
+        doors.pausesOutgoingScene = true
+        self.view!.presentScene(scene, transition: doors)
+    }
+    
     
 //    var projectile: Projectile!
+    var restartButton: TouchableSprite!
     var projectile: SKSpriteNode!
     var projectileIsDragged = false
     var touchCurrentPoint: CGPoint!
@@ -27,6 +41,8 @@ class GameScene: SKScene {
         
         setupSlingshot()
         setupBoxes()
+        setupRestart()
+        
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -92,6 +108,14 @@ class GameScene: SKScene {
         }
     }
     
+    func setupRestart() {
+        restartButton = TouchableSprite(imageNamed: "64x200")
+        restartButton.delegate = self
+        restartButton.position = CGPoint(x: self.view!.bounds.midX, y: self.view!.bounds.midY)
+        restartButton.run(SKAction.fadeOut(withDuration: 0))
+        addChild(restartButton)
+    }
+    
     // Version I
     
 //    func setupSlingshot() {
@@ -154,6 +178,12 @@ class GameScene: SKScene {
         return CGPoint(x: cX + projectileRestPosition.x, y: cY + projectileRestPosition.y)
     }
     
-    
+    override func update(_ currentTime: TimeInterval) {
+        if projectile.physicsBody != nil {
+            if (projectile.physicsBody!.isResting) {
+                restartButton.run(SKAction.fadeIn(withDuration: 2))
+            }
+        }
+    }
 
 }

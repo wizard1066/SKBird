@@ -16,6 +16,7 @@
 		7BE20CF5219187C000D68240 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7BE20CF4219187C000D68240 /* Assets.xcassets */; };
 		7BE20CF7219189BA00D68240 /* Nodes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE20CF6219189BA00D68240 /* Nodes.swift */; };
 		7BE20CF921918BAE00D68240 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE20CF821918BAE00D68240 /* Settings.swift */; };
+		7BE20CFB219199C300D68240 /* TouchableSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE20CFA219199C300D68240 /* TouchableSprite.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 		7BE20CF4219187C000D68240 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7BE20CF6219189BA00D68240 /* Nodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Nodes.swift; sourceTree = "<group>"; };
 		7BE20CF821918BAE00D68240 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		7BE20CFA219199C300D68240 /* TouchableSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchableSprite.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +67,7 @@
 				7BE20CDC2191877700D68240 /* AppDelegate.swift */,
 				7BE20CE02191877700D68240 /* Actions.sks */,
 				7BE20CE22191877700D68240 /* GameScene.swift */,
+				7BE20CFA219199C300D68240 /* TouchableSprite.swift */,
 				7BE20CF821918BAE00D68240 /* Settings.swift */,
 				7BE20CF6219189BA00D68240 /* Nodes.swift */,
 				7BE20CE42191877700D68240 /* GameViewController.swift */,
@@ -150,6 +153,7 @@
 			files = (
 				7BE20CE32191877700D68240 /* GameScene.swift in Sources */,
 				7BE20CE52191877700D68240 /* GameViewController.swift in Sources */,
+				7BE20CFB219199C300D68240 /* TouchableSprite.swift in Sources */,
 				7BE20CDD2191877700D68240 /* AppDelegate.swift in Sources */,
 				7BE20CF7219189BA00D68240 /* Nodes.swift in Sources */,
 				7BE20CF921918BAE00D68240 /* Settings.swift in Sources */,
