@@ -11,16 +11,68 @@ import GameplayKit
 
 
 
-class GameScene: SKScene, touchMe {
+class GameScene: SKScene, touchMe, SKPhysicsContactDelegate  {
+    
+    let src = [
+        // bottom row: left, center, right
+        vector_float2(0.0, 0.0),
+        vector_float2(0.5, 0.0),
+        vector_float2(1.0, 0.0),
+        
+        // middle row: left, center, right
+        vector_float2(0.0, 0.5),
+        vector_float2(0.5, 0.5),
+        vector_float2(1.0, 0.5),
+        
+        // top row: left, center, right
+        vector_float2(0.0, 1.0),
+        vector_float2(0.5, 1.0),
+        vector_float2(1.0, 1.0)
+    ]
+    
+    enum categories {
+        static let noCat:UInt32 = 0
+        static let birdCat:UInt32 = 0b1
+        static let boxCat:UInt32 = 0b1 << 1
+        static let floorCat: UInt32 = 0b1 << 2
+    }
     
     func spriteTouched(box: TouchableSprite) {
-        let scene = GameScene()
-        scene.size = view!.bounds.size
-        scene.scaleMode = .aspectFill
-        let doors = SKTransition.crossFade(withDuration: 2)
-        doors.pausesIncomingScene = false
-        doors.pausesOutgoingScene = true
-        self.view!.presentScene(scene, transition: doors)
+        if box.name == "restart" {
+            let scene = GameScene()
+            scene.size = view!.bounds.size
+            scene.scaleMode = .aspectFill
+            let doors = SKTransition.crossFade(withDuration: 2)
+            doors.pausesIncomingScene = false
+            doors.pausesOutgoingScene = true
+            self.view!.presentScene(scene, transition: doors)
+        } else {
+            let bird2Select = "\(box.name!)"
+            let kids = scene?.children
+            for kid in kids! {
+                if kid.name == bird2Select {
+                    kid.run(SKAction.fadeOut(withDuration: 1))
+                }
+            }
+            projectile = SKSpriteNode(imageNamed:bird2Select)
+            projectile.position = Settings.Metrics.projectileRestPosition
+            projectile.name = bird2Select
+            projectile.run(SKAction.fadeOut(withDuration: 0))
+            addChild(projectile)
+            projectile.run(SKAction.fadeIn(withDuration: 1))
+            
+        }
+        
+    }
+    
+    func didBegin(_ contact: SKPhysicsContact) {
+        print("contact cA \(contact.bodyA.node?.name) cB \(contact.bodyB.node?.name)")
+        let cA = contact.bodyA.node?.name
+        let cB = contact.bodyB.node?.name
+        if cA == "box" {
+            let cAx = (contact.bodyA.node as! Box)
+            cAx.integrity -= 1
+        }
     }
     
     
@@ -36,12 +88,18 @@ class GameScene: SKScene, touchMe {
         backgroundColor = UIColor.black
         
         physicsBody = SKPhysicsBody(edgeLoopFrom: frame)
+        physicsBody?.contactTestBitMask = categories.floorCat
+        physicsBody?.categoryBitMask = categories.floorCat
+        physicsBody?.collisionBitMask = categories.floorCat
         physicsWorld.gravity = Settings.Game.gravity
         physicsWorld.speed = 0.5
+        physicsWorld.contactDelegate = self
+        
         
         setupSlingshot()
         setupBoxes()
         setupRestart()
+        setupBirds()
         
     }
     
@@ -92,9 +150,14 @@ class GameScene: SKScene, touchMe {
                 let vectorX = touchStartingPoint.x - touchCurrentPoint.x
                 let vectorY = touchStartingPoint.y - touchCurrentPoint.y
 //                projectile.physicsBody = SKPhysicsBody(circleOfRadius: Settings.Metrics.projectileRadius)
-                let redBird = SKTexture(imageNamed: "redBird")
-                projectile.physicsBody = SKPhysicsBody(texture: redBird, size: redBird.size())
-                
+                var birdName = "\(projectile.name!)"
+                let birdX = SKTexture(imageNamed: birdName)
+                projectile.physicsBody = SKPhysicsBody(texture: birdX, size: birdX.size())
+                projectile?.physicsBody?.categoryBitMask = categories.birdCat
+                // category that defines which bodies will react it
+//                projectile?.physicsBody?.collisionBitMask = categories.noCat
+                // respond with cause delegate calls
+                projectile?.physicsBody?.contactTestBitMask = categories.boxCat
                 projectile.physicsBody?.applyImpulse(
                     CGVector(
                         dx: vectorX * Settings.Metrics.forceMultiplier,
@@ -110,6 +173,7 @@ class GameScene: SKScene, touchMe {
     
     func setupRestart() {
         restartButton = TouchableSprite(imageNamed: "64x200")
+        restartButton.name = "restart"
         restartButton.delegate = self
         restartButton.position = CGPoint(x: self.view!.bounds.midX, y: self.view!.bounds.midY)
         restartButton.run(SKAction.fadeOut(withDuration: 0))
@@ -148,9 +212,26 @@ class GameScene: SKScene, touchMe {
         slingshot_2.position = CGPoint(x: 100, y: 50)
         addChild(slingshot_2)
         
-        projectile = SKSpriteNode(imageNamed:"redBird")
-        projectile.position = Settings.Metrics.projectileRestPosition
-        addChild(projectile)
+//        projectile = SKSpriteNode(imageNamed:"redBird")
+//        projectile.position = Settings.Metrics.projectileRestPosition
+//        addChild(projectile)
+    }
+    
+    func setupBirds() {
+        var birdNames = ["red","blue","yellow","white"]
+        var xCord = self.view!.bounds.midX + 128
+        for _ in 0..<birdNames.count {
+            let bird = birdNames.popLast()
+        
+            let bird2Show = "\(bird!)Bird"
+            let birdSprite = TouchableSprite(imageNamed:bird2Show)
+            
+            birdSprite.position = CGPoint(x: xCord, y: self.view!.bounds.maxY - 64)
+            birdSprite.name = bird2Show
+            birdSprite.delegate = self
+            xCord -= 96
+            addChild(birdSprite)
+        }
     }
     
     func setupBoxes() {
@@ -159,9 +240,31 @@ class GameScene: SKScene, touchMe {
                 let box = Box(imageNamed: "box_2")
                 box.integrity = 2
                 box.position = CGPoint(x: 400 + (i * 20 + 5 * i), y:  j * 20 + j)
-                box.physicsBody = SKPhysicsBody(rectangleOf: box.size)
+                let bigBox = CGSize(width: 40, height: 40)
+                box.size = bigBox
+                box.physicsBody = SKPhysicsBody(rectangleOf: bigBox)
+                box.physicsBody?.isDynamic = true
+//                box.physicsBody?.affectedByGravity = true
+                box.physicsBody?.categoryBitMask = categories.boxCat
+               // category that defines which bodies will react it
+//                box.physicsBody?.collisionBitMask = categories.birdCat
+                // respond with cause delegate calls
+                box.physicsBody?.contactTestBitMask = categories.birdCat
+                box.name = "box"
                 addChild(box)
             }
+        }
+    }
+    
+    override func update(_ currentTime: TimeInterval) {
+        if projectile != nil {
+            if projectile.physicsBody != nil {
+                if (projectile.physicsBody!.isResting) {
+                    restartButton.run(SKAction.fadeIn(withDuration: 2))
+                }
+//                print("projectile \(projectile.physicsBody!.velocity)")
+            }
+            
         }
     }
     
@@ -178,12 +281,6 @@ class GameScene: SKScene, touchMe {
         return CGPoint(x: cX + projectileRestPosition.x, y: cY + projectileRestPosition.y)
     }
     
-    override func update(_ currentTime: TimeInterval) {
-        if projectile.physicsBody != nil {
-            if (projectile.physicsBody!.isResting) {
-                restartButton.run(SKAction.fadeIn(withDuration: 2))
-            }
-        }
-    }
+    
 
 }
